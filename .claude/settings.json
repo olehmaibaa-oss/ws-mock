@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 wsm.py)",
+      "Bash(python3 wsm.py *)"
+    ]
+  }
+}

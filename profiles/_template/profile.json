@@ -1,0 +1,44 @@
+{
+  "_about": "Template for your own app. Copy it with `python3 wsm.py new <name>`, then replace every CHANGE_ME (README: Use it on your own app).",
+
+  "_hosts": "Host of the WebSocket, as `wsm.py inspect` shows it. Empty = any host (fine for the first capture).",
+  "hosts": [],
+
+  "_frame": "Which frame drives the screen and where its list is. `wsm.py inspect` prints this block, paste it here.",
+  "frame": {
+    "match": {"has": "/CHANGE_ME"},
+    "list": "/CHANGE_ME",
+    "id": "CHANGE_ME",
+    "label": "CHANGE_ME"
+  },
+
+  "_fields": "The field map: what each field of one list item does on the screen. Fill it before the presets, a mock is only as right as this map. Key = path inside one item (dotted or /pointer). Value = what it drives, the values it takes, and how you know: spec, dev, or tried (checked on the screen with `wsm.py set`). `wsm.py fields` shows it next to the real values.",
+  "fields": {
+    "CHANGE_ME_FIELD": "CHANGE_ME: what it drives on the screen, its values (spec / dev / tried)"
+  },
+
+  "_presets": "One preset per state from your design/spec. Each preset = the real item `source` cloned with this patch. Patch only the fields that make the state.",
+  "presets": {
+    "source": "CHANGE_ME",
+    "items": {
+      "example-state": {"CHANGE_ME_FIELD": "CHANGE_ME_VALUE"}
+    }
+  },
+
+  "_rules": "Scenarios for this app. The built-ins (frozen, duplicate, slow, late-frame, reverse, empty) already work, nothing to add for them.",
+  "rules": [
+    {
+      "name": "example-patch",
+      "_doc": "patch one real item",
+      "by_id": {"CHANGE_ME_ID": {"CHANGE_ME_FIELD": "CHANGE_ME_VALUE"}}
+    }
+  ],
+
+  "_push": "What `wsm.py inject` changes in the last real frame before pushing it into the open socket.",
+  "push": [
+    {
+      "name": "live-update",
+      "by_id": {"CHANGE_ME_ID": {"CHANGE_ME_FIELD": "CHANGE_ME_VALUE"}}
+    }
+  ]
+}

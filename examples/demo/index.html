@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ws-mock demo</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #fff; --line: #e7e4dd; --text: #1d1c1a; --muted: #85817a;
+    --accent: #ff6a3d; --green: #1f9d63; --blue: #2f6fe4; --grey: #b9b5ad; --red: #e0443b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         padding: env(safe-area-inset-top) 16px 32px; }
+  header { position: sticky; top: 0; background: var(--bg); padding: 14px 0 10px;
+           display: flex; justify-content: space-between; align-items: baseline; z-index: 1; }
+  h1 { font-size: 22px; margin: 0; }
+  .status { font: 12px ui-monospace, Menlo, monospace; color: var(--muted); text-align: right; }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+         background: var(--red); margin-right: 6px; vertical-align: 1px; }
+  .dot.on { background: var(--green); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+          padding: 14px; margin-top: 10px; transition: border-color .4s, box-shadow .4s; }
+  .card.flash { border-color: var(--accent); box-shadow: 0 0 0 2px #ff6a3d33; }
+  .card.done { opacity: .7; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .name { font-weight: 650; font-size: 16px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 3px; }
+  .badge { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: 99px;
+           background: #f0eee9; color: var(--muted); white-space: nowrap; }
+  .badge.preparing { background: #fff1e6; color: #c25416; }
+  .badge.on_the_way { background: #e8f0ff; color: var(--blue); }
+  .badge.delivered { background: #e5f6ee; color: var(--green); }
+  .badge.cancelled, .badge.unknown { background: #fde9e7; color: var(--red); }
+  .steps { display: flex; gap: 4px; margin: 12px 0 10px; }
+  .steps i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+  .steps i.on { background: var(--accent); }
+  .btn { border: 0; border-radius: 10px; padding: 8px 14px; font-weight: 600; font-size: 14px;
+         background: var(--accent); color: #fff; min-width: 92px; }
+  .btn.ghost { background: #f0eee9; color: var(--text); }
+  .eta { font-weight: 600; }
+  .empty { color: var(--muted); text-align: center; margin-top: 40px; }
+  .id { font: 11px ui-monospace, Menlo, monospace; color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>My orders</h1>
+  <div class="status"><span class="dot" id="dot"></span><span id="conn">connecting</span><br>
+    <span id="frame">no frames yet</span></div>
+</header>
+<main id="list"><div class="empty">waiting for the socket…</div></main>
+
+<script>
+const LABEL = { placed: "Order placed", preparing: "Preparing", on_the_way: "On the way",
+                delivered: "Delivered", cancelled: "Cancelled" };
+const CTA = { placed: "Cancel", preparing: "Track", on_the_way: "Track", delivered: "Rate", cancelled: "Reorder" };
+const list = document.getElementById("list");
+let prev = {};
+let last = [];
+
+function eta(ts) {
+  const m = Math.round((ts - Date.now() / 1000) / 60);
+  if (m < 0) return `${-m} min late`;
+  return m === 0 ? "any minute" : `${m} min`;
+}
+// eta is excluded so a moving timer doesn't count as a change
+function key(o) { return JSON.stringify({ ...o, eta: undefined }); }
+function esc(v) {
+  return String(v ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+
+function render(orders) {
+  last = orders;
+  if (!orders.length) { list.innerHTML = '<div class="empty">no orders yet</div>'; return; }
+  list.innerHTML = orders.map(o => {
+    const st = o.status in LABEL ? o.status : "unknown";
+    const s = o.step || {};
+    const steps = Array.from({ length: s.of || 0 }, (_, i) => `<i class="${i < s.current ? "on" : ""}"></i>`).join("");
+    const t = o.total || {};
+    const done = st === "delivered" || st === "cancelled";
+    const changed = prev[o.id] && prev[o.id] !== key(o);
+    const sub = st === "on_the_way" && o.courier ? `${esc(o.courier.name)} is on the way` :
+                st === "delivered" ? "Enjoy your meal" : st === "cancelled" ? "Refund on its way" : "";
+    return `<div class="card ${done ? "done" : ""} ${changed ? "flash" : ""}">
+      <div class="row">
+        <div class="name">${esc(o.restaurant)}</div>
+        <span class="badge ${st}">${esc(LABEL[st] || o.status)}</span>
+      </div>
+      <div class="meta">${esc(o.items)} items · ${t.amount != null ? "£" + Number(t.amount).toFixed(2) : ""}</div>
+      <div class="steps">${steps}</div>
+      <div class="row">
+        <div>
+          ${done ? "" : `<div class="eta">${o.eta ? eta(o.eta) : ""}</div>`}
+          <div class="meta">${sub}</div>
+        </div>
+        <button class="btn ${done ? "ghost" : ""}">${esc(o.cta || CTA[st] || "Open")}</button>
+      </div>
+      <div class="id">#${esc(o.id)}</div>
+    </div>`;
+  }).join("");
+  prev = Object.fromEntries(orders.map(o => [o.id, key(o)]));
+  setTimeout(() => document.querySelectorAll(".flash").forEach(e => e.classList.remove("flash")), 700);
+}
+
+function connect() {
+  const proto = location.protocol === "https:" ? "wss" : "ws";
+  const ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onopen = () => { dot.classList.add("on"); conn.textContent = "connected"; };
+  ws.onclose = () => { dot.classList.remove("on"); conn.textContent = "reconnecting"; setTimeout(connect, 1500); };
+  ws.onmessage = e => {
+    let data;
+    try { data = JSON.parse(e.data); } catch { conn.textContent = "bad JSON frame"; return; }
+    frame.textContent = `seq ${data.seq ?? "?"} · ${(e.data.length / 1024).toFixed(1)} KB`;
+    if (Array.isArray(data.orders)) render(data.orders);
+  };
+}
+setInterval(() => last.length && render(last), 30000);
+connect();
+</script>
+</body>
+</html>

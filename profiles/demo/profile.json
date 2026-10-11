@@ -1,0 +1,70 @@
+{
+  "_about": "DEMO: food delivery orders from examples/demo. Try ws-mock here before setting up your own app.",
+
+  "hosts": [],
+
+  "frame": {
+    "match": {"has": "/orders", "equals": {"/type": "orders.snapshot"}},
+    "list": "/orders",
+    "id": "id",
+    "label": "restaurant"
+  },
+
+  "_fields": "The field map: what each field of an order does on the screen. The presets below are built from it.",
+  "fields": {
+    "status": "status badge and colour: placed | preparing | on_the_way | delivered | cancelled (spec)",
+    "step.current": "progress bar, filled steps (spec)",
+    "step.of": "progress bar, number of steps, 4 (spec)",
+    "courier.name": "courier line under the badge, while on_the_way; null = no courier (spec)",
+    "eta": "ETA countdown, unix seconds (spec)",
+    "restaurant": "card title (spec)",
+    "items": "item count, \"N items\" (spec)",
+    "total.amount": "price line; no total = no price (spec)",
+    "cta": "button text; missing = default for the status (spec)"
+  },
+
+  "presets": {
+    "source": 1000,
+    "first_id": 9001,
+    "items": {
+      "placed":         {"status": "placed", "step": {"current": 1}, "courier": null},
+      "preparing":      {"status": "preparing", "step": {"current": 2}, "courier": null},
+      "on-the-way":     {"status": "on_the_way", "step": {"current": 3}, "courier": {"name": "Priya"}},
+      "delivered":      {"status": "delivered", "step": {"current": 4}},
+      "cancelled":      {"status": "cancelled", "step": {"current": 1}},
+      "late":           {"status": "on_the_way", "step": {"current": 3}, "courier": {"name": "Tom"}, "eta": "__TS_S:-12m__"},
+      "arriving-now":   {"status": "on_the_way", "step": {"current": 3}, "courier": {"name": "Ana"}, "eta": "__TS_S:+0m__"},
+      "unknown-status": {"status": "refunded"},
+      "no-courier":     {"status": "on_the_way", "step": {"current": 3}, "courier": null},
+      "step-overflow":  {"status": "preparing", "step": {"current": 7, "of": 4}},
+      "long-name":      {"restaurant": "The Original Family Kitchen of Northern Thai Street Food and Noodles"},
+      "free-order":     {"total": {"amount": 0}},
+      "no-total":       {"total": "__DELETE__"},
+      "custom-cta":     {"status": "placed", "step": {"current": 1}, "cta": "Contact support"}
+    }
+  },
+
+  "rules": [
+    {
+      "name": "delivered",
+      "_doc": "order #1000 is delivered in every frame",
+      "by_id": {"1000": {"status": "delivered", "step": {"current": 4}, "courier": null}}
+    },
+    {
+      "name": "late-old-frame",
+      "_doc": "An old frame lands late: order #1000 goes back from Delivered to On the way",
+      "with": ["delivered"],
+      "once": true,
+      "delay_ms": 5000,
+      "by_id": {"1000": {"status": "on_the_way", "step": {"current": 3}, "courier": {"name": "Sam"}}}
+    }
+  ],
+
+  "push": [
+    {
+      "name": "live-update",
+      "_doc": "wsm.py inject: #1000 goes on the way without reopening the screen",
+      "by_id": {"1000": {"status": "on_the_way", "step": {"current": 3}, "courier": {"name": "Sam"}}}
+    }
+  ]
+}

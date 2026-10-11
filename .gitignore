@@ -1,0 +1,17 @@
+logs/
+.state.json
+.state.json.tmp
+__pycache__/
+*.pyc
+.DS_Store
+
+# your own profiles stay local (company hosts and payloads don't belong in a public repo)
+profiles/*
+!profiles/demo/
+!profiles/_template/
+
+# Claude Code: personal approvals stay local, the shared settings and the skill are committed
+.claude/settings.local.json
+
+# skill ZIPs from wsm.py pack-skills
+dist/
